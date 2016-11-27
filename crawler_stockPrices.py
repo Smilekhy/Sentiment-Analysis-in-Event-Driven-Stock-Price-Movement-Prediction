@@ -14,7 +14,7 @@ def stock_Prices():
     if os.path.isfile('./input/stockPrices.json'):
         sys.exit("Prices data already existed!")
 
-    priceSet = []
+    priceSet = {}
     fin = open('./input/tickerList.csv')
     for num, line in enumerate(fin):
         line = line.strip().split(',')
@@ -23,12 +23,12 @@ def stock_Prices():
             print(num, ticker)
             yahoo = Share(ticker)
             time.sleep(np.random.poisson(3))
-            prices = yahoo.get_historical('2009-01-01', '2020-01-01')
+            prices = yahoo.get_historical('2005-01-01', '2020-01-01')
             priceDt = {}
             for i in range(len(prices)):
                 date = ''.join(prices[i]['Date'].split('-'))
                 priceDt[date] = round(log(float(prices[i]['Close']) / float(prices[i]['Open'])), 6)
-            priceSet.append({ticker: priceDt})
+            priceSet[ticker] = priceDt
         except:
             continue
 

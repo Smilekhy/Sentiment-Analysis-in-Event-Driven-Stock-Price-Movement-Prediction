@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import os
 import en
 import nltk
@@ -17,7 +18,7 @@ from keras.layers.embeddings import Embedding
 from keras.preprocessing import sequence
 
 
-def gen_financial_top_words(maxN=20000): # generate corpus based on Reuters news
+def gen_financial_top_words(maxN=40000): # generate corpus based on Reuters news
     if not os.path.isfile('./input/topWords.json'):
         wordCnt = {}
         for field in reuters.fileids():
@@ -45,9 +46,9 @@ def build_FeatureMatrix(n_vocab=2000):
         topWords = json.load(data_file)
 
     with open('./input/stockPrices.json') as data_file:    
-        priceDt = json.load(data_file)[0]
+        priceDt = json.load(data_file)
     loc = './input/'
-    input_files = [f for f in os.listdir(loc) if f.startswith('news_')]
+    input_files = [f for f in os.listdir(loc) if f.startswith('news_reuters.csv')]
     sentences = []
     word2idx = {'START': 0, 'END': 1}
     idx2word = ['START', 'END']
@@ -55,19 +56,20 @@ def build_FeatureMatrix(n_vocab=2000):
     word_idx_count = {0: float('inf'), 1: float('inf')}
 
     labels = []
+    cnt = 0
     for file in input_files:
         for line in open(loc + file):
             line = line.strip().split(',')
             if len(line) != 5: continue
             ticker, name, day, headline, body = line
+            print(cnt, ticker)
+            cnt += 1
             if ticker not in priceDt: continue
             if day not in priceDt[ticker]: continue
 
-            tokens = nltk.word_tokenize(headline)# + nltk.word_tokenize(body)
-            tokens = [unify_word(t) for t in tokens]
-            for t in tokens:
-                if t in nltk.corpus.stopwords.words('english') or t not in topWords:
-                    tokens.remove(t)
+            tokens = nltk.word_tokenize(headline) + nltk.word_tokenize(body)
+            tokens = [unify_word(t) for t in tokens if t in topWords]
+
             for t in tokens:
                 if t not in word2idx:
                     word2idx[t] = current_idx
@@ -104,12 +106,15 @@ def build_FeatureMatrix(n_vocab=2000):
             sentences_small.append(new_sentence)
             new_label.append(label)
 
-    max_words = 10
+    max_words = 40
     truncated_small = np.matrix(sequence.pad_sequences(sentences_small, maxlen=max_words)).astype('int')
     print truncated_small
-    featureMatrix = np.concatenate((truncated_small, np.matrix(new_label).T), axis=1)
+    new_label = np.matrix(new_label)
+    # new_label[new_label>0] = 1
+    # new_label[new_label<=0] = 0
+    featureMatrix = np.concatenate((truncated_small, new_label.T), axis=1)
     print featureMatrix
-    np.savetxt('./input/featureMatrix.csv', featureMatrix, delimiter=',')
+    np.savetxt('./input/featureMatrix.csv', featureMatrix, delimiter=',', fmt="%d")
     # return truncated_small, new_label
 
 
