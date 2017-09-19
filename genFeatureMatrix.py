@@ -19,6 +19,7 @@ def unify_word(word): # went -> go, apples -> apple, BIG -> big
     except: pass
     return word.lower()
 
+# Glove Word Embedding Data 불러와 반환
 def readGlove(we_file, w2i_file, concat=True):
     npz = np.load(we_file)
     W1 = npz['arr_0']
@@ -27,6 +28,8 @@ def readGlove(we_file, w2i_file, concat=True):
         word2idx = json.load(f)
 
     V = len(word2idx)
+
+    # Stack 으로 쌓거나 평균값으로 사용하거나 선택
     if concat:
         We = np.hstack([W1, W2.T])
         print "We.shape:", We.shape
@@ -50,12 +53,19 @@ def gen_FeatureMatrix(wordEmbedding, word2idx, priceDt, max_words=60, mtype="tes
     current_idx = 2
     dp = {} # only consider one news for a company everyday
     cnt = 0
+
+    # 테스트 데이터를 최근 100일 간으로 사용
     testDates = dateGenerator(100)
+
+    # 워드 임베딩 dimension 설정
     shape = wordEmbedding.shape[1]
+    # Sentenc Feature 저장할 array 미리 생성
     features = np.zeros([0, max_words * shape])
     labels = []
     for file in input_files:
         for line in open(loc + file):
+
+            # 로이터 뉴스 로드해서 단어 preprocessing
             line = line.strip().split(',')
             if len(line) != 5: continue
             ticker, name, day, headline, body = line
@@ -73,12 +83,17 @@ def gen_FeatureMatrix(wordEmbedding, word2idx, priceDt, max_words=60, mtype="tes
             # 2.2 create word2idx/idx2word list, and a list to count the occurence of words
             sentencesVec = np.zeros([shape, 0])
             for t in tokens:
+                # 기존 정의한 사전에 없으면 생략
                 if t not in word2idx: continue
+                # sentencesVec 에 로이터 뉴스에서 가져온 단어 를 embedding 으로 바꿔 hstack으로 쌓기
                 sentencesVec = np.hstack((sentencesVec, np.matrix(wordEmbedding[word2idx[t]]).T))
+            # 각 sentencesVec을 feature에 vstack으로 저장
             features = np.vstack((features, padding(sentencesVec, max_words)))
+            # 해당 기사의 종목, 날짜의 주식 수정종가를 labels 에 저장
             labels.append(round(priceDt[ticker][day], 6))
     features = np.array(features)
     labels = np.matrix(labels)
+    # 각 기사 sentenceVec + 수정종가 데이터를 feature data로 저장
     featureMatrix = np.concatenate((features, labels.T), axis=1)
     fileName = './input/featureMatrix_' + mtype + '.csv'
     np.savetxt(fileName, featureMatrix, fmt="%s")
