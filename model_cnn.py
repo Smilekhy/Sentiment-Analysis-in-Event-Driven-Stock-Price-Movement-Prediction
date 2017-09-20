@@ -16,6 +16,8 @@ from keras.preprocessing import sequence
 from keras.utils.np_utils import to_categorical
 from sklearn.metrics import confusion_matrix
 
+# 총 Return 중에서 절반 이하 값은 0, 절반 이상 값은 1로 라벨링
+# Random pick 을 벤치마크로 가져감
 def value2int(y, clusters=2):
     label = np.copy(y)
     label[y < np.percentile(y, 100 / clusters)] = 0
@@ -23,6 +25,7 @@ def value2int(y, clusters=2):
         label[y > np.percentile(y, 100 * i / clusters)] = i
     return label
 
+# 수익률 - 이면 0, +면 1
 def value2int_simple(y):
     label = np.copy(y)
     label[y < 0] = 0
@@ -47,7 +50,7 @@ def get_Feature_Label(clusters=2, hasJunk=True):
     y_test = to_categorical(value2int_simple(y_test)).astype("int")
     return X_train, y_train, X_valid, y_valid, X_test, y_test
 
-
+# Text classification Using CNN image 참조
 def CNN(clusters):
     model = Sequential()
     model.add(Convolution2D(64, 3, 50, border_mode='valid', input_shape=(20, 50, 1), activation='relu'))
